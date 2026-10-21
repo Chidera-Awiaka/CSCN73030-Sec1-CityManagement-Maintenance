@@ -1,0 +1,56 @@
+# ============================================================
+# Maintenance Service - Doxygen configuration
+# Run from the repository root: doxygen Doxyfile
+# ============================================================
+
+# Project
+PROJECT_NAME           = "Maintenance Service"
+PROJECT_BRIEF          = "City Management - Maintenance service design documentation"
+OUTPUT_DIRECTORY       = docs/generated
+OUTPUT_LANGUAGE        = English
+DOXYFILE_ENCODING      = UTF-8
+
+# Input: source code, tests and documentation pages
+INPUT                  = README.md src tests docs
+INPUT_ENCODING         = UTF-8
+FILE_PATTERNS          = *.cs *.md *.dox
+RECURSIVE              = YES
+
+# Do not scan generated documentation or build artifacts
+EXCLUDE                = docs/generated
+EXCLUDE_PATTERNS       = */bin/* */obj/* */.git/*
+
+# Documentation extraction
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = NO
+HIDE_UNDOC_MEMBERS      = NO
+HIDE_UNDOC_CLASSES      = NO
+
+# Markdown documentation
+MARKDOWN_SUPPORT       = YES
+USE_MDFILE_AS_MAINPAGE  = README.md
+
+# Display source code
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+
+# HTML output
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_TREEVIEW      = YES
+SEARCHENGINE           = YES
+
+# Disable unused output formats
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+
+# No Graphviz installation required
+HAVE_DOT               = NO
+
+# Warnings
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
