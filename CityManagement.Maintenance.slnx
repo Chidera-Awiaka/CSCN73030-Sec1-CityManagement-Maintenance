@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/services/">
+    <Project Path="src/services/Maintenance.Security/Maintenance.Security.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Maintenance.Security.Tests/Maintenance.Security.Tests.csproj" />
+  </Folder>
+</Solution>
