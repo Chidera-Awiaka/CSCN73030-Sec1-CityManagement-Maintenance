@@ -16,3 +16,11 @@ frontend/dist/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Visual Studio cache
+.vs/
+
+# Runtime data saved by the API
+backend/Maintenance.Api/Data/*.json
+
+*.user

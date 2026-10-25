@@ -1,6 +1,28 @@
 @Maintenance.Api_HostAddress = http://localhost:5164
 
-GET {{Maintenance.Api_HostAddress}}/weatherforecast/
+### MNT-02: list all interventions
+GET {{Maintenance.Api_HostAddress}}/api/interventions
 Accept: application/json
 
-###
+### MNT-02: filter by priority, location and status
+GET {{Maintenance.Api_HostAddress}}/api/interventions?priority=High&location=King&status=To%20Do
+Accept: application/json
+
+### MNT-01: create an intervention (201 Created)
+POST {{Maintenance.Api_HostAddress}}/api/interventions
+Content-Type: application/json
+
+{
+  "description": "Pothole near bus stop",
+  "location": "King Street North",
+  "issueType": "Road",
+  "priority": "High"
+}
+
+### MNT-01: missing required fields (400 Bad Request)
+POST {{Maintenance.Api_HostAddress}}/api/interventions
+Content-Type: application/json
+
+{
+  "description": ""
+}
