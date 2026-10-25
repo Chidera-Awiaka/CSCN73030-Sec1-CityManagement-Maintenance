@@ -6,7 +6,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-builder.Services.AddSingleton<InterventionService>();
+// Interventions are saved to Data/interventions.json (MNT-01 persistent storage)
+builder.Services.AddSingleton(_ => new InterventionService(
+    Path.Combine(builder.Environment.ContentRootPath, "Data", "interventions.json")));
 
 builder.Services.AddCors(options =>
 {

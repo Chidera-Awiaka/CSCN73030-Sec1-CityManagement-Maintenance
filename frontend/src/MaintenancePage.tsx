@@ -1,30 +1,33 @@
-import { useEffect, useState } from "react";
-
-type Intervention = {
-  id: number;
-  description: string;
-  location: string;
-  issueType: string;
-  priority: string;
-  status: string;
-};
+import { useCallback, useEffect, useState } from "react";
+import CreateInterventionForm from "./CreateInterventionForm";
+import { API_BASE, PRIORITIES, STATUSES, type Intervention } from "./api";
 
 function MaintenancePage() {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
 
-  const loadInterventions = async () => {
-    const response = await fetch("http://localhost:5000/api/interventions");
+  // MNT-02 filters
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const loadInterventions = useCallback(async () => {
+    const params = new URLSearchParams();
+    if (priorityFilter) params.append("priority", priorityFilter);
+    if (locationFilter) params.append("location", locationFilter);
+    if (statusFilter) params.append("status", statusFilter);
+
+    const response = await fetch(`${API_BASE}/interventions?${params}`);
     const data = await response.json();
 
     setInterventions(data);
-  };
+  }, [priorityFilter, locationFilter, statusFilter]);
 
   useEffect(() => {
     loadInterventions();
-  }, []);
+  }, [loadInterventions]);
 
   const updatePriority = async (id: number, priority: string) => {
-    await fetch(`http://localhost:5000/api/interventions/${id}/priority`, {
+    await fetch(`${API_BASE}/interventions/${id}/priority`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -38,7 +41,7 @@ function MaintenancePage() {
   };
 
   const updateStatus = async (id: number, status: string) => {
-    await fetch(`http://localhost:5000/api/interventions/${id}/status`, {
+    await fetch(`${API_BASE}/interventions/${id}/status`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -51,9 +54,45 @@ function MaintenancePage() {
     loadInterventions();
   };
 
+  const clearFilters = () => {
+    setPriorityFilter("");
+    setLocationFilter("");
+    setStatusFilter("");
+  };
+
   return (
     <div style={{ padding: "30px" }}>
       <h1>Maintenance Interventions</h1>
+
+      {/* MNT-01: create */}
+      <CreateInterventionForm onCreated={loadInterventions} />
+
+      {/* MNT-02: filter */}
+      <div style={{ marginBottom: "20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+          <option value="">All priorities</option>
+          {PRIORITIES.map((p) => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
+
+        <input
+          placeholder="Filter by location"
+          value={locationFilter}
+          onChange={(e) => setLocationFilter(e.target.value)}
+        />
+
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">All statuses</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+
+        <button onClick={clearFilters}>Clear filters</button>
+      </div>
+
+      <p>{interventions.length} intervention(s) found</p>
 
       {interventions.map((intervention) => (
         <div
@@ -88,10 +127,9 @@ function MaintenancePage() {
               updatePriority(intervention.id, event.target.value)
             }
           >
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-            <option value="Critical">Critical</option>
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
           </select>
 
           <p>
@@ -104,12 +142,9 @@ function MaintenancePage() {
               updateStatus(intervention.id, event.target.value)
             }
           >
-            <option value="To Do">To Do</option>
-            <option value="Scheduled">Scheduled</option>
-            <option value="In Progress">In Progress</option>
-            <option value="On Hold">On Hold</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
         </div>
       ))}
