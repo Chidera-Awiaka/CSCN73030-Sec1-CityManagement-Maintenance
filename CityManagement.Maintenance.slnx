@@ -1,9 +1,13 @@
 <Solution>
+  <Folder Name="/backend/">
+    <Project Path="backend/Maintenance.Api/Maintenance.Api.csproj" />
+  </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/services/">
     <Project Path="src/services/Maintenance.Security/Maintenance.Security.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Maintenance.Api.Tests/Maintenance.Api.Tests.csproj" />
     <Project Path="tests/Maintenance.Security.Tests/Maintenance.Security.Tests.csproj" />
   </Folder>
 </Solution>
