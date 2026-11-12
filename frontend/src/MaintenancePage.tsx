@@ -10,13 +10,30 @@ function MaintenancePage() {
   const [locationFilter, setLocationFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
+  // MNT-04 schedule values
+  const [startDates, setStartDates] = useState<Record<number, string>>({});
+  const [endDates, setEndDates] = useState<Record<number, string>>({});
+
+  // MNT-05 technician selection
+  const [technicians, setTechnicians] = useState<Record<number, string>>({});
+
   const loadInterventions = useCallback(async () => {
     const params = new URLSearchParams();
-    if (priorityFilter) params.append("priority", priorityFilter);
-    if (locationFilter) params.append("location", locationFilter);
-    if (statusFilter) params.append("status", statusFilter);
+
+    if (priorityFilter) {
+      params.append("priority", priorityFilter);
+    }
+
+    if (locationFilter) {
+      params.append("location", locationFilter);
+    }
+
+    if (statusFilter) {
+      params.append("status", statusFilter);
+    }
 
     const response = await fetch(`${API_BASE}/interventions?${params}`);
+
     const data = await response.json();
 
     setInterventions(data);
@@ -26,6 +43,7 @@ function MaintenancePage() {
     loadInterventions();
   }, [loadInterventions]);
 
+  // MNT-03
   const updatePriority = async (id: number, priority: string) => {
     await fetch(`${API_BASE}/interventions/${id}/priority`, {
       method: "PUT",
@@ -40,6 +58,7 @@ function MaintenancePage() {
     loadInterventions();
   };
 
+  // MNT-07
   const updateStatus = async (id: number, status: string) => {
     await fetch(`${API_BASE}/interventions/${id}/status`, {
       method: "PUT",
@@ -50,6 +69,76 @@ function MaintenancePage() {
         status: status,
       }),
     });
+
+    loadInterventions();
+  };
+
+  // MNT-04
+  const scheduleIntervention = async (id: number) => {
+    const plannedStartDate = startDates[id];
+    const plannedEndDate = endDates[id];
+
+    if (!plannedStartDate || !plannedEndDate) {
+      alert("Please select both start and end dates.");
+      return;
+    }
+
+    if (new Date(plannedEndDate) < new Date(plannedStartDate)) {
+      alert("End date cannot be before start date.");
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/interventions/${id}/schedule`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        plannedStartDate,
+        plannedEndDate,
+      }),
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      alert(message || "Unable to schedule intervention.");
+      return;
+    }
+
+    alert("Intervention scheduled successfully.");
+
+    loadInterventions();
+  };
+
+  // MNT-05
+  const assignTechnician = async (id: number) => {
+    const technicianValue = technicians[id];
+
+    if (!technicianValue) {
+      alert("Please select a technician.");
+      return;
+    }
+
+    const [technicianId, technicianName] = technicianValue.split("|");
+
+    const response = await fetch(`${API_BASE}/interventions/${id}/assign`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        technicianId: Number(technicianId),
+        technicianName: technicianName,
+      }),
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      alert(message || "Unable to assign technician.");
+      return;
+    }
+
+    alert("Technician assigned successfully.");
 
     loadInterventions();
   };
@@ -68,11 +157,24 @@ function MaintenancePage() {
       <CreateInterventionForm onCreated={loadInterventions} />
 
       {/* MNT-02: filter */}
-      <div style={{ marginBottom: "20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+      <div
+        style={{
+          marginBottom: "20px",
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+        }}
+      >
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+        >
           <option value="">All priorities</option>
+
           {PRIORITIES.map((p) => (
-            <option key={p} value={p}>{p}</option>
+            <option key={p} value={p}>
+              {p}
+            </option>
           ))}
         </select>
 
@@ -82,10 +184,16 @@ function MaintenancePage() {
           onChange={(e) => setLocationFilter(e.target.value)}
         />
 
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
           <option value="">All statuses</option>
+
           {STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
 
@@ -117,6 +225,7 @@ function MaintenancePage() {
             <strong>Issue Type:</strong> {intervention.issueType}
           </p>
 
+          {/* MNT-03 */}
           <p>
             <strong>Priority:</strong> {intervention.priority}
           </p>
@@ -128,10 +237,13 @@ function MaintenancePage() {
             }
           >
             {PRIORITIES.map((p) => (
-              <option key={p} value={p}>{p}</option>
+              <option key={p} value={p}>
+                {p}
+              </option>
             ))}
           </select>
 
+          {/* MNT-07 */}
           <p>
             <strong>Status:</strong> {intervention.status}
           </p>
@@ -143,9 +255,135 @@ function MaintenancePage() {
             }
           >
             {STATUSES.map((s) => (
-              <option key={s} value={s}>{s}</option>
+              <option key={s} value={s}>
+                {s}
+              </option>
             ))}
           </select>
+
+          <hr
+            style={{
+              marginTop: "20px",
+              marginBottom: "20px",
+            }}
+          />
+
+          {/* MNT-04 */}
+          <h3>Schedule Intervention</h3>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <label>Planned Start:</label>
+
+              <br />
+
+              <input
+                type="datetime-local"
+                value={startDates[intervention.id] || ""}
+                onChange={(e) =>
+                  setStartDates({
+                    ...startDates,
+                    [intervention.id]: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <label>Planned End:</label>
+
+              <br />
+
+              <input
+                type="datetime-local"
+                value={endDates[intervention.id] || ""}
+                onChange={(e) =>
+                  setEndDates({
+                    ...endDates,
+                    [intervention.id]: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <button onClick={() => scheduleIntervention(intervention.id)}>
+              Schedule
+            </button>
+          </div>
+
+          <p>
+            <strong>Current Planned Start:</strong>{" "}
+            {intervention.plannedStartDate
+              ? new Date(intervention.plannedStartDate).toLocaleString()
+              : "Not scheduled"}
+          </p>
+
+          <p>
+            <strong>Current Planned End:</strong>{" "}
+            {intervention.plannedEndDate
+              ? new Date(intervention.plannedEndDate).toLocaleString()
+              : "Not scheduled"}
+          </p>
+
+          <hr
+            style={{
+              marginTop: "20px",
+              marginBottom: "20px",
+            }}
+          />
+
+          {/* MNT-05 */}
+          <h3>Assign Technician</h3>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            <select
+              value={technicians[intervention.id] || ""}
+              onChange={(e) =>
+                setTechnicians({
+                  ...technicians,
+                  [intervention.id]: e.target.value,
+                })
+              }
+            >
+              <option value="">Select technician</option>
+
+              <option value="101|Alex Technician">Alex Technician</option>
+
+              <option value="102|Sam Technician">Sam Technician</option>
+
+              <option value="103|Jordan Technician">Jordan Technician</option>
+            </select>
+
+            <button onClick={() => assignTechnician(intervention.id)}>
+              Assign Technician
+            </button>
+          </div>
+
+          <p>
+            <strong>Assigned Technician:</strong>{" "}
+            {intervention.assignedTechnicianName || "Not assigned"}
+          </p>
+
+          {intervention.assignedTechnicianId && (
+            <p>
+              <strong>Technician ID:</strong>{" "}
+              {intervention.assignedTechnicianId}
+            </p>
+          )}
         </div>
       ))}
     </div>
