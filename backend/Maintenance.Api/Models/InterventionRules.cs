@@ -30,4 +30,10 @@ public static class InterventionRules
     public const string ScheduledStatus = "Scheduled";
 
     public const int MinimumTechnicianId = 1;
+
+    /// <summary>Status given to an intervention when it is closed (MNT-08).</summary>
+    public const string CompletedStatus = "Completed";
+
+    /// <summary>Status of an intervention that was cancelled; it cannot be closed (MNT-08).</summary>
+    public const string CancelledStatus = "Cancelled";
 }

@@ -1,3 +1,4 @@
+using Maintenance.Api.Integration;
 using Maintenance.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +10,11 @@ builder.Services.AddOpenApi();
 // Interventions are saved to Data/interventions.json (MNT-01 persistent storage)
 builder.Services.AddSingleton(_ => new InterventionService(
     Path.Combine(builder.Environment.ContentRootPath, "Data", "interventions.json")));
+
+// REG-01 / REG-02: Property Registry integration. The mock is replaced by a REST
+// client once the Property Registration service publishes its API.
+// A factory is used so DI does not pick the test constructor (which takes a property list).
+builder.Services.AddSingleton<IPropertyRegistry>(_ => new MockPropertyRegistry());
 
 builder.Services.AddCors(options =>
 {

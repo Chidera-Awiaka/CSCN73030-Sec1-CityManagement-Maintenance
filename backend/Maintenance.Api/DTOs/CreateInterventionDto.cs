@@ -17,4 +17,7 @@ public class CreateInterventionDto
 
     /// <summary>Optional starting priority. Defaults to "Medium" when omitted.</summary>
     public string? Priority { get; set; }
+
+    /// <summary>Optional work instructions for the technician (MNT-06).</summary>
+    public string? Instructions { get; set; }
 }
