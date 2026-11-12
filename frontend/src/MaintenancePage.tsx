@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import CreateInterventionForm from "./CreateInterventionForm";
+import PropertyPanel from "./PropertyPanel";
+import MyAssignments from "./MyAssignments";
+import CloseInterventionPanel from "./CloseInterventionPanel";
 import { API_BASE, PRIORITIES, STATUSES, type Intervention } from "./api";
 
 function MaintenancePage() {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
+
+  // MNT-06: refreshes "My Assigned Interventions" after any change
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // MNT-02 filters
   const [priorityFilter, setPriorityFilter] = useState("");
@@ -37,6 +43,7 @@ function MaintenancePage() {
     const data = await response.json();
 
     setInterventions(data);
+    setRefreshKey((k) => k + 1);
   }, [priorityFilter, locationFilter, statusFilter]);
 
   useEffect(() => {
@@ -155,6 +162,9 @@ function MaintenancePage() {
 
       {/* MNT-01: create */}
       <CreateInterventionForm onCreated={loadInterventions} />
+
+      {/* MNT-06 */}
+      <MyAssignments refreshKey={refreshKey} />
 
       {/* MNT-02: filter */}
       <div
@@ -384,6 +394,18 @@ function MaintenancePage() {
               {intervention.assignedTechnicianId}
             </p>
           )}
+
+          {intervention.instructions && (
+            <p>
+              <strong>Instructions:</strong> {intervention.instructions}
+            </p>
+          )}
+
+          {/* MNT-08: close the intervention */}
+          <CloseInterventionPanel intervention={intervention} onClosed={loadInterventions} />
+
+          {/* REG-01 / REG-02: search the Property Registry and link properties */}
+          <PropertyPanel interventionId={intervention.id} onChanged={loadInterventions} />
         </div>
       ))}
     </div>

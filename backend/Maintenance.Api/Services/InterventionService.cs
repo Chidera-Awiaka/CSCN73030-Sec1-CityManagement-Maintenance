@@ -214,7 +214,12 @@ public class InterventionService
 
                 Status = InterventionRules.InitialStatus,
 
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+
+                Instructions =
+                    string.IsNullOrWhiteSpace(request.Instructions)
+                        ? null
+                        : request.Instructions.Trim()
             };
 
             _interventions.Add(intervention);
@@ -391,6 +396,160 @@ public class InterventionService
             List<Intervention>>(
                 json,
                 JsonOptions);
+    }
+
+    /// <summary>
+    /// Links an external property to an intervention (REG-02).
+    /// The caller must first confirm the property exists in the Property Registry.
+    /// </summary>
+    /// <param name="id">Intervention ID.</param>
+    /// <param name="propertyId">External Property ID, stored as supplied by the registry.</param>
+    /// <returns>Success, InterventionNotFound or AlreadyLinked.</returns>
+    public PropertyLinkResult LinkProperty(int id, string propertyId)
+    {
+        lock (_lock)
+        {
+            var intervention = _interventions.FirstOrDefault(x => x.Id == id);
+            if (intervention == null)
+            {
+                return PropertyLinkResult.InterventionNotFound;
+            }
+
+            if (intervention.LinkedPropertyIds.Contains(propertyId, StringComparer.OrdinalIgnoreCase))
+            {
+                return PropertyLinkResult.AlreadyLinked;
+            }
+
+            intervention.LinkedPropertyIds.Add(propertyId);
+            Save();
+            return PropertyLinkResult.Success;
+        }
+    }
+
+    /// <summary>Removes a property link from an intervention (REG-02).</summary>
+    /// <param name="id">Intervention ID.</param>
+    /// <param name="propertyId">External Property ID to remove.</param>
+    /// <returns>Success, InterventionNotFound or NotLinked.</returns>
+    public PropertyLinkResult UnlinkProperty(int id, string propertyId)
+    {
+        lock (_lock)
+        {
+            var intervention = _interventions.FirstOrDefault(x => x.Id == id);
+            if (intervention == null)
+            {
+                return PropertyLinkResult.InterventionNotFound;
+            }
+
+            int removed = intervention.LinkedPropertyIds.RemoveAll(x =>
+                string.Equals(x, propertyId?.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (removed == 0)
+            {
+                return PropertyLinkResult.NotLinked;
+            }
+
+            Save();
+            return PropertyLinkResult.Success;
+        }
+    }
+
+    /// <summary>
+    /// Returns the interventions assigned to one technician (MNT-06).
+    /// Only that technician's assignments are returned, earliest planned start first
+    /// (unscheduled work last), then highest priority.
+    /// </summary>
+    /// <param name="technicianId">Technician ID (as assigned in MNT-05).</param>
+    /// <param name="includeClosed">When false, Completed and Cancelled interventions are hidden.</param>
+    /// <returns>The technician's interventions; empty when none are assigned.</returns>
+    public List<Intervention> GetAssignedTo(int technicianId, bool includeClosed = false)
+    {
+        lock (_lock)
+        {
+            return _interventions
+                .Where(x => x.AssignedTechnicianId == technicianId)
+                .Where(x => includeClosed
+                    || (x.Status != InterventionRules.CompletedStatus
+                        && x.Status != InterventionRules.CancelledStatus))
+                .OrderBy(x => x.PlannedStartDate ?? DateTime.MaxValue)
+                .ThenByDescending(x => Array.IndexOf(InterventionRules.Priorities, x.Priority))
+                .ToList();
+        }
+    }
+
+    /// <summary>
+    /// Checks a close request against the MNT-08 rules.
+    /// </summary>
+    /// <param name="request">Close request.</param>
+    /// <param name="createdAt">When the intervention was created.</param>
+    /// <param name="now">Current time (UTC); a parameter so tests can fix it.</param>
+    /// <returns>List of validation errors; empty when valid.</returns>
+    public static List<string> ValidateClose(CloseInterventionDto? request, DateTime createdAt, DateTime now)
+    {
+        var errors = new List<string>();
+
+        if (request is null)
+        {
+            errors.Add("Request body is required.");
+            return errors;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.CompletionReport))
+        {
+            errors.Add("A completion report is required.");
+        }
+
+        if (request.ActualCompletionDate is { } done)
+        {
+            if (done > now.AddMinutes(5))
+            {
+                errors.Add("Actual completion date cannot be in the future.");
+            }
+
+            if (done < createdAt)
+            {
+                errors.Add("Actual completion date cannot be before the intervention was created.");
+            }
+        }
+
+        if (request.ActualCost is < 0)
+        {
+            errors.Add("Actual cost cannot be negative.");
+        }
+
+        return errors;
+    }
+
+    /// <summary>
+    /// Closes an intervention (MNT-08): records the completion report, the actual
+    /// completion date (now when not supplied) and the optional actual cost, and sets
+    /// the status to Completed. Call <see cref="ValidateClose"/> first.
+    /// </summary>
+    /// <param name="id">Intervention ID.</param>
+    /// <param name="request">Validated close request.</param>
+    /// <returns>Closed, NotFound or AlreadyClosed.</returns>
+    public CloseResult CloseIntervention(int id, CloseInterventionDto request)
+    {
+        lock (_lock)
+        {
+            var intervention = _interventions.FirstOrDefault(x => x.Id == id);
+            if (intervention == null)
+            {
+                return CloseResult.NotFound;
+            }
+
+            if (intervention.Status == InterventionRules.CompletedStatus
+                || intervention.Status == InterventionRules.CancelledStatus)
+            {
+                return CloseResult.AlreadyClosed;
+            }
+
+            intervention.CompletionReport = request.CompletionReport.Trim();
+            intervention.ActualCompletionDate = request.ActualCompletionDate ?? DateTime.UtcNow;
+            intervention.ActualCost = request.ActualCost;
+            intervention.Status = InterventionRules.CompletedStatus;
+
+            Save();
+            return CloseResult.Closed;
+        }
     }
 
     /// <summary>

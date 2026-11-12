@@ -7,6 +7,7 @@ function CreateInterventionForm({ onCreated }: { onCreated: () => void }) {
   const [location, setLocation] = useState("");
   const [issueType, setIssueType] = useState("");
   const [priority, setPriority] = useState("Medium");
+  const [instructions, setInstructions] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [message, setMessage] = useState("");
 
@@ -18,7 +19,7 @@ function CreateInterventionForm({ onCreated }: { onCreated: () => void }) {
     const response = await fetch(`${API_BASE}/interventions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description, location, issueType, priority }),
+      body: JSON.stringify({ description, location, issueType, priority, instructions }),
     });
 
     if (!response.ok) {
@@ -33,6 +34,7 @@ function CreateInterventionForm({ onCreated }: { onCreated: () => void }) {
     setLocation("");
     setIssueType("");
     setPriority("Medium");
+    setInstructions("");
     onCreated();
   };
 
@@ -73,6 +75,17 @@ function CreateInterventionForm({ onCreated }: { onCreated: () => void }) {
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Instructions{" "}
+          <input
+            value={instructions}
+            placeholder="Work instructions for the technician (optional)"
+            onChange={(e) => setInstructions(e.target.value)}
+          />
         </label>
       </p>
 

@@ -31,4 +31,22 @@ public class Intervention
     public int? AssignedTechnicianId { get; set; }
 
     public string? AssignedTechnicianName { get; set; }
+
+    /// <summary>
+    /// External Property IDs linked to this intervention (REG-02).
+    /// Only the ID is stored; property details stay in the Property Registry.
+    /// </summary>
+    public List<string> LinkedPropertyIds { get; set; } = new();
+
+    /// <summary>Work instructions for the technician (MNT-06). Optional.</summary>
+    public string? Instructions { get; set; }
+
+    /// <summary>Report of the work performed, required to close the intervention (MNT-08).</summary>
+    public string? CompletionReport { get; set; }
+
+    /// <summary>Date and time (UTC) the work was actually completed (MNT-08).</summary>
+    public DateTime? ActualCompletionDate { get; set; }
+
+    /// <summary>Actual cost of the work in dollars (MNT-08). Optional.</summary>
+    public decimal? ActualCost { get; set; }
 }
