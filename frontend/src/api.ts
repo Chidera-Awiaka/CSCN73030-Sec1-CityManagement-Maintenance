@@ -1,5 +1,5 @@
 /** Base URL of the Maintenance API (matches the "http" profile in launchSettings.json). */
-export const API_BASE = "http://localhost:5164/api";
+export const API_BASE = "http://localhost:5000/api";
 
 export type Intervention = {
   id: number;
@@ -9,6 +9,14 @@ export type Intervention = {
   priority: string;
   status: string;
   createdAt: string;
+
+  // MNT-04
+  plannedStartDate?: string;
+  plannedEndDate?: string;
+
+  // MNT-05
+  assignedTechnicianId?: number;
+  assignedTechnicianName?: string;
 };
 
 export const PRIORITIES = ["Low", "Medium", "High", "Critical"];
