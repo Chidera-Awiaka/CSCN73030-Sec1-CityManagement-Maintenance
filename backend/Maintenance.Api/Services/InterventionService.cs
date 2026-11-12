@@ -80,10 +80,16 @@ public class InterventionService
     /// <param name="priority">Priority such as High.</param>
     /// <param name="location">Part of the location.</param>
     /// <param name="status">Operational status.</param>
+    /// <param name="technicianId">
+    /// Optional ID of the assigned technician (MNT-05 data).
+    /// Added in Sprint 2 to complete the MNT-02 filter acceptance
+    /// criteria (GitHub #2). Ignored when null.
+    /// </param>
     public List<Intervention> Filter(
         string? priority,
         string? location,
-        string? status)
+        string? status,
+        int? technicianId = null)
     {
         lock (_lock)
         {
@@ -113,6 +119,12 @@ public class InterventionService
                         x.Status,
                         status.Trim(),
                         StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (technicianId is not null)
+            {
+                query = query.Where(x =>
+                    x.AssignedTechnicianId == technicianId);
             }
 
             return query

@@ -22,6 +22,12 @@ builder.Services.AddCors(options =>
 });
 
 
+// ESV-01 / ESV-02: incident reports received from E-services.
+// Accepting a report creates an intervention through InterventionService.
+builder.Services.AddSingleton(sp => new IncidentReportService(
+    sp.GetRequiredService<InterventionService>(),
+    Path.Combine(builder.Environment.ContentRootPath, "Data", "incident-reports.json")));
+
 var app = builder.Build();
 app.UseCors("AllowFrontend");
 
