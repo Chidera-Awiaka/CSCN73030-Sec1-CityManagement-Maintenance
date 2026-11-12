@@ -32,17 +32,20 @@ public class InterventionsController : ControllerBase
     /// <param name="priority">Optional exact priority.</param>
     /// <param name="location">Optional text the location must contain.</param>
     /// <param name="status">Optional exact operational status.</param>
+    /// <param name="technicianId">Optional assigned technician ID (MNT-02 fix, GitHub #2).</param>
     [HttpGet]
     public IActionResult GetAll(
         [FromQuery] string? priority,
         [FromQuery] string? location,
-        [FromQuery] string? status)
+        [FromQuery] string? status,
+        [FromQuery] int? technicianId)
     {
         return Ok(
             _service.Filter(
                 priority,
                 location,
-                status
+                status,
+                technicianId
             )
         );
     }
