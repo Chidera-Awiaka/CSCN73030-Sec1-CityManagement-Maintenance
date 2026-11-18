@@ -1,5 +1,6 @@
-/** Base URL of the Maintenance API (matches the "http" profile in launchSettings.json). */
-export const API_BASE = "http://localhost:5164/api";
+/** API URL: local override or the default backend launch profile. */
+export const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5164/api";
 
 export type Intervention = {
   id: number;
