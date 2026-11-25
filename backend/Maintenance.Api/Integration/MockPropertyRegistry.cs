@@ -62,6 +62,37 @@ public class MockPropertyRegistry : IPropertyRegistry
             string.Equals(p.PropertyId, propertyId.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <inheritdoc />
+    public PropertyUtilities? GetUtilities(string propertyId)
+    {
+        var property = GetById(propertyId);
+        if (property is null) return null;
+
+        // Sample data: some utilities are intentionally missing to show the "not supplied" state.
+        return property.PropertyId switch
+        {
+            "PR-1001" => new PropertyUtilities
+            {
+                PropertyId = property.PropertyId,
+                Water = new UtilityInfo { Provider = "Region of Waterloo Water", ShutoffLocation = "Curb box, north side", Notes = "200 mm main" },
+                Electricity = new UtilityInfo { Provider = "Enova Power", ShutoffLocation = "Basement panel room" },
+                Gas = new UtilityInfo { Provider = "Enbridge Gas", ShutoffLocation = "East wall meter" }
+            },
+            "PR-1002" => new PropertyUtilities
+            {
+                PropertyId = property.PropertyId,
+                Water = new UtilityInfo { Provider = "Region of Waterloo Water", ShutoffLocation = "Front yard" },
+                Electricity = new UtilityInfo { Provider = "Enova Power" }
+            },
+            "PR-1004" => new PropertyUtilities
+            {
+                PropertyId = property.PropertyId,
+                Electricity = new UtilityInfo { Provider = "Enova Power", ShutoffLocation = "Utility room B1" }
+            },
+            _ => new PropertyUtilities { PropertyId = property.PropertyId }
+        };
+    }
+
     private void EnsureAvailable()
     {
         if (!IsAvailable)

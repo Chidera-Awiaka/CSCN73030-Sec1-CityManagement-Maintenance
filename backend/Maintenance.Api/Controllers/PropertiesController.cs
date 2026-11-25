@@ -53,4 +53,39 @@ public class PropertiesController : ControllerBase
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Utility information supplied by the Property Registry for one property (REG-03).
+    /// Water, electricity and gas are listed; anything not supplied is named in "missingUtilities".
+    /// </summary>
+    /// <param name="propertyId">Property ID, e.g. PR-1001.</param>
+    /// <returns>200 with the utilities; 404 unknown property; 503 registry unavailable.</returns>
+    [HttpGet("{propertyId}/utilities")]
+    public IActionResult Utilities(string propertyId)
+    {
+        try
+        {
+            var utilities = _registry.GetUtilities(propertyId);
+            if (utilities is null)
+            {
+                return NotFound(new { message = $"Property '{propertyId}' was not found in the Property Registry." });
+            }
+
+            return Ok(new
+            {
+                utilities.PropertyId,
+                water = utilities.Water,
+                electricity = utilities.Electricity,
+                gas = utilities.Gas,
+                missingUtilities = utilities.MissingUtilities,
+                message = utilities.MissingUtilities.Count == 0
+                    ? null
+                    : $"Not supplied by the Property Registry: {string.Join(", ", utilities.MissingUtilities)}."
+            });
+        }
+        catch (PropertyRegistryUnavailableException ex)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = ex.Message });
+        }
+    }
 }

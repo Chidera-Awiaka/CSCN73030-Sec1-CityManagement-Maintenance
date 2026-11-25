@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Maintenance.Api.DTOs;
+using Maintenance.Api.Infrastructure;
 using Maintenance.Api.Integration;
 using Maintenance.Api.Models;
 using Maintenance.Api.Services;
@@ -16,16 +17,41 @@ public class InterventionsController : ControllerBase
 {
     private readonly InterventionService _service;
     private readonly IPropertyRegistry _registry;
+    private readonly AuditService? _audit;
+    private readonly BudgetPolicy _budgetPolicy;
 
     /// <summary>
     /// Creates the controller.
     /// </summary>
     /// <param name="service">Intervention business logic.</param>
     /// <param name="registry">Property Registry integration (REG-01 / REG-02).</param>
-    public InterventionsController(InterventionService service, IPropertyRegistry registry)
+    /// <param name="audit">Audit history (TEC-05). Optional so existing tests can create the controller without it.</param>
+    /// <param name="budgetPolicy">BUD-04 setting. Optional; off when not supplied.</param>
+    public InterventionsController(InterventionService service, IPropertyRegistry registry,
+        AuditService? audit = null, BudgetPolicy? budgetPolicy = null)
     {
         _service = service;
         _registry = registry;
+        _audit = audit;
+        _budgetPolicy = budgetPolicy ?? new BudgetPolicy();
+    }
+
+    /// <summary>Records an audit entry for an intervention (TEC-05).</summary>
+    private void Audit(int id, string action, string details) =>
+        _audit?.Record("Intervention", id, action, RequestContext.Actor(Request), details);
+
+    /// <summary>Overlapping assignments as warnings (STF-02).</summary>
+    private object Overlaps(int id)
+    {
+        var target = _service.GetById(id);
+        var conflicts = target is null ? new List<AssignmentConflict>() : AssignmentConflicts.For(_service.GetAll(), target);
+        return new
+        {
+            warnings = conflicts.Select(c =>
+                $"Overlaps intervention #{c.InterventionId} \"{c.Description}\" ({c.PlannedStartDate:yyyy-MM-dd HH:mm} - {c.PlannedEndDate:yyyy-MM-dd HH:mm}) for the same technician.").ToList(),
+            conflicts,
+            scope = AssignmentConflicts.Scope
+        };
     }
 
     /// <summary>
@@ -38,6 +64,7 @@ public class InterventionsController : ControllerBase
     /// <param name="location">Optional text the location must contain.</param>
     /// <param name="status">Optional exact operational status.</param>
     /// <param name="technicianId">Optional assigned technician ID (MNT-02 fix, GitHub #2).</param>
+    /// <returns>The HTTP result (status codes described above).</returns>
     [HttpGet]
     public IActionResult GetAll(
         [FromQuery] string? priority,
@@ -59,6 +86,7 @@ public class InterventionsController : ControllerBase
     /// Gets one intervention by ID.
     /// </summary>
     /// <param name="id">Intervention ID.</param>
+    /// <returns>The HTTP result (status codes described above).</returns>
     [HttpGet("{id:int}")]
     public IActionResult GetById(int id)
     {
@@ -77,6 +105,8 @@ public class InterventionsController : ControllerBase
     /// Returns 201 with the new intervention,
     /// or 400 with validation errors.
     /// </summary>
+    /// <param name="request">Description, location, issue type, optional priority and instructions.</param>
+    /// <returns>The HTTP result (status codes described above).</returns>
     [HttpPost]
     public IActionResult Create(CreateInterventionDto request)
     {
@@ -105,6 +135,9 @@ public class InterventionsController : ControllerBase
     /// <summary>
     /// Updates the priority of an intervention (MNT-03).
     /// </summary>
+    /// <param name="id">Intervention ID.</param>
+    /// <param name="request">New priority: Low, Medium, High or Critical.</param>
+    /// <returns>The HTTP result (status codes described above).</returns>
     [HttpPut("{id:int}/priority")]
     public IActionResult UpdatePriority(
         int id,
@@ -124,10 +157,13 @@ public class InterventionsController : ControllerBase
             );
         }
 
+        var previousPriority = _service.GetById(id)?.Priority;
         if (!_service.UpdatePriority(id, priority))
         {
             return NotFound("Intervention not found.");
         }
+
+        Audit(id, AuditActions.PriorityChanged, $"{previousPriority} -> {priority}");
 
         return Ok(new
         {
@@ -138,6 +174,9 @@ public class InterventionsController : ControllerBase
     /// <summary>
     /// Updates the operational status of an intervention (MNT-07).
     /// </summary>
+    /// <param name="id">Intervention ID.</param>
+    /// <param name="request">New operational status.</param>
+    /// <returns>The HTTP result (status codes described above).</returns>
     [HttpPut("{id:int}/status")]
     public IActionResult UpdateStatus(
         int id,
@@ -157,10 +196,25 @@ public class InterventionsController : ControllerBase
             );
         }
 
+        var current = _service.GetById(id);
+        if (current is null)
+        {
+            return NotFound("Intervention not found.");
+        }
+
+        // BUD-04: work cannot start without an approved budget (when the rule is enabled).
+        if (_budgetPolicy.BlockReason(current, status) is { } blocked)
+        {
+            return Conflict(new { message = blocked, errors = new[] { blocked } });
+        }
+
+        var previousStatus = current.Status;
         if (!_service.UpdateStatus(id, status))
         {
             return NotFound("Intervention not found.");
         }
+
+        Audit(id, AuditActions.StatusChanged, $"{previousStatus} -> {status}");
 
         return Ok(new
         {
@@ -178,6 +232,9 @@ public class InterventionsController : ControllerBase
     /// A successfully scheduled intervention is
     /// moved to the Scheduled operational status.
     /// </summary>
+    /// <param name="id">Intervention ID.</param>
+    /// <param name="request">Planned start and end dates.</param>
+    /// <returns>The HTTP result (status codes described above).</returns>
     [HttpPut("{id:int}/schedule")]
     public IActionResult ScheduleIntervention(
         int id,
@@ -215,9 +272,12 @@ public class InterventionsController : ControllerBase
             return NotFound("Intervention not found.");
         }
 
+        Audit(id, AuditActions.Scheduled, $"{request.PlannedStartDate:yyyy-MM-dd HH:mm} - {request.PlannedEndDate:yyyy-MM-dd HH:mm}");
+
         return Ok(new
         {
-            message = "Intervention scheduled successfully."
+            message = "Intervention scheduled successfully.",
+            overlaps = Overlaps(id)
         });
     }
 
@@ -228,6 +288,9 @@ public class InterventionsController : ControllerBase
     /// can come from the Staff service. Mock/sample technician
     /// data may be used during development.
     /// </summary>
+    /// <param name="id">Intervention ID.</param>
+    /// <param name="request">Technician ID and name (from Staff).</param>
+    /// <returns>The HTTP result (status codes described above).</returns>
     [HttpPut("{id:int}/assign")]
     public IActionResult AssignTechnician(
         int id,
@@ -258,9 +321,12 @@ public class InterventionsController : ControllerBase
             return NotFound("Intervention not found.");
         }
 
+        Audit(id, AuditActions.TechnicianAssigned, $"{request.TechnicianName.Trim()} ({request.TechnicianId})");
+
         return Ok(new
         {
-            message = "Technician assigned successfully."
+            message = "Technician assigned successfully.",
+            overlaps = Overlaps(id)
         });
     }
 
@@ -390,11 +456,19 @@ public class InterventionsController : ControllerBase
             return BadRequest(new { errors });
         }
 
+        var previousStatus = intervention.Status;
         return _service.CloseIntervention(id, request) switch
         {
-            CloseResult.Closed => Ok(new { message = $"Intervention {id} closed." }),
+            CloseResult.Closed => AuditedClose(id, previousStatus),
             CloseResult.AlreadyClosed => Conflict(new { message = $"Intervention {id} is already {intervention.Status}." }),
             _ => NotFound(new { message = "Intervention not found." })
         };
+    }
+
+    private IActionResult AuditedClose(int id, string previousStatus)
+    {
+        Audit(id, AuditActions.Closed, $"{previousStatus} -> Completed");
+        Audit(id, AuditActions.StatusChanged, $"{previousStatus} -> Completed");
+        return Ok(new { message = $"Intervention {id} closed." });
     }
 }

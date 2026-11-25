@@ -565,6 +565,29 @@ public class InterventionService
     }
 
     /// <summary>
+    /// Applies a change to one intervention and saves it. Used by the Sprint 3
+    /// services (budget, weather actions) that add data to an intervention.
+    /// </summary>
+    /// <param name="id">Intervention ID.</param>
+    /// <param name="change">The change to apply.</param>
+    /// <returns>False when the intervention does not exist.</returns>
+    public bool Update(int id, Action<Intervention> change)
+    {
+        lock (_lock)
+        {
+            var intervention = _interventions.FirstOrDefault(x => x.Id == id);
+            if (intervention == null)
+            {
+                return false;
+            }
+
+            change(intervention);
+            Save();
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Saves interventions to JSON storage.
     /// </summary>
     private void Save()

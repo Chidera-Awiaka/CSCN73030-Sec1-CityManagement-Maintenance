@@ -1,9 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import CreateInterventionForm from "./CreateInterventionForm";
 import PropertyPanel from "./PropertyPanel";
+import InterventionExtrasPanel from "./InterventionExtrasPanel";
 import MyAssignments from "./MyAssignments";
 import CloseInterventionPanel from "./CloseInterventionPanel";
-import { API_BASE, PRIORITIES, STATUSES, type Intervention } from "./api";
+import { API_BASE, CURRENT_USER, PRIORITIES, STATUSES, errorMessage, type Intervention } from "./api";
+
+/** STF-02: overlap warnings returned by the schedule / assign endpoints. */
+const overlapText = async (response: Response) => {
+  try {
+    const data = await response.json();
+    const warnings: string[] = data?.overlaps?.warnings ?? [];
+    return warnings.length ? `\n\nWarning:\n${warnings.join("\n")}\n(${data.overlaps.scope})` : "";
+  } catch {
+    return "";
+  }
+};
 
 function MaintenancePage() {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
@@ -56,6 +68,7 @@ function MaintenancePage() {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        "X-User-Id": CURRENT_USER,
       },
       body: JSON.stringify({
         priority: priority,
@@ -67,15 +80,21 @@ function MaintenancePage() {
 
   // MNT-07
   const updateStatus = async (id: number, status: string) => {
-    await fetch(`${API_BASE}/interventions/${id}/status`, {
+    const response = await fetch(`${API_BASE}/interventions/${id}/status`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        "X-User-Id": CURRENT_USER,
       },
       body: JSON.stringify({
         status: status,
       }),
     });
+
+    // BUD-04: show why the change was refused (e.g. budget not approved).
+    if (!response.ok) {
+      alert(await errorMessage(response));
+    }
 
     loadInterventions();
   };
@@ -99,6 +118,7 @@ function MaintenancePage() {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        "X-User-Id": CURRENT_USER,
       },
       body: JSON.stringify({
         plannedStartDate,
@@ -112,7 +132,7 @@ function MaintenancePage() {
       return;
     }
 
-    alert("Intervention scheduled successfully.");
+    alert("Intervention scheduled successfully." + (await overlapText(response)));
 
     loadInterventions();
   };
@@ -132,6 +152,7 @@ function MaintenancePage() {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        "X-User-Id": CURRENT_USER,
       },
       body: JSON.stringify({
         technicianId: Number(technicianId),
@@ -145,7 +166,7 @@ function MaintenancePage() {
       return;
     }
 
-    alert("Technician assigned successfully.");
+    alert("Technician assigned successfully." + (await overlapText(response)));
 
     loadInterventions();
   };
@@ -406,6 +427,9 @@ function MaintenancePage() {
 
           {/* REG-01 / REG-02: search the Property Registry and link properties */}
           <PropertyPanel interventionId={intervention.id} onChanged={loadInterventions} />
+
+          {/* Sprint 3: budget, road closures, security, disruptions, utilities, overlaps */}
+          <InterventionExtrasPanel intervention={intervention} onChanged={loadInterventions} />
         </div>
       ))}
     </div>

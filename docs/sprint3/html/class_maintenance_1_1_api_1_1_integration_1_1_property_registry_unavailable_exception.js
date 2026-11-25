@@ -1,0 +1,4 @@
+var class_maintenance_1_1_api_1_1_integration_1_1_property_registry_unavailable_exception =
+[
+    [ "PropertyRegistryUnavailableException", "class_maintenance_1_1_api_1_1_integration_1_1_property_registry_unavailable_exception.html#a69a3c5b31df73112511b46395ac064e2", null ]
+];
