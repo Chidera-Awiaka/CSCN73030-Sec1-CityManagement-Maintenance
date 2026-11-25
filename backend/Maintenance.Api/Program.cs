@@ -1,4 +1,5 @@
 using Maintenance.Api.Integration;
+using Maintenance.Api.Models;
 using Maintenance.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,7 +35,53 @@ builder.Services.AddSingleton(sp => new IncidentReportService(
     sp.GetRequiredService<InterventionService>(),
     Path.Combine(builder.Environment.ContentRootPath, "Data", "incident-reports.json")));
 
+// ---------------- Sprint 3 ----------------
+string DataFile(string name) => Path.Combine(builder.Environment.ContentRootPath, "Data", name);
+
+// TEC-05 audit history.
+builder.Services.AddSingleton(_ => new AuditService(DataFile("audit.json")));
+
+// TEC-03 mock external services (replaced by real REST clients that follow docs/integration-contracts.md).
+builder.Services.AddSingleton(_ => ExternalServiceHub.WithMocks());
+builder.Services.AddSingleton<IStaffDirectory>(_ => new MockStaffDirectory());
+builder.Services.AddSingleton<ITransitService>(_ => new MockTransitService());
+
+// TEC-04 exchange log with retries.
+builder.Services.AddSingleton(sp => new ExchangeService(sp.GetRequiredService<ExternalServiceHub>(), DataFile("exchanges.json")));
+
+// BUD-04 rule (pending confirmation): off unless Budget:RequireApprovalToStart = true.
+builder.Services.AddSingleton(_ => new BudgetPolicy
+{
+    RequireApprovalToStart = builder.Configuration.GetValue("Budget:RequireApprovalToStart", false)
+});
+
+// ESV-03 / ESV-04 / ESV-05 weather alerts.
+builder.Services.AddSingleton(sp => new WeatherAlertService(
+    sp.GetRequiredService<InterventionService>(), sp.GetRequiredService<AuditService>(),
+    sp.GetRequiredService<ExchangeService>(), DataFile("weather-alerts.json")));
+
+// BUD-01 .. BUD-05 budget.
+builder.Services.AddSingleton(sp => new BudgetService(
+    sp.GetRequiredService<InterventionService>(), sp.GetRequiredService<ExchangeService>(), sp.GetRequiredService<AuditService>()));
+
+// SEC-01 / SEC-02 security requests.
+builder.Services.AddSingleton(sp => new SecurityService(
+    sp.GetRequiredService<InterventionService>(), sp.GetRequiredService<ExchangeService>(),
+    sp.GetRequiredService<AuditService>(), DataFile("security-requests.json")));
+
+// ESV-06 / SEC-03 / TRP-02 / REG-04 notices.
+builder.Services.AddSingleton(sp => new NoticeService(
+    sp.GetRequiredService<InterventionService>(), sp.GetRequiredService<ExchangeService>(), DataFile("notices.json")));
+
+// TRP-03 route changes.
+builder.Services.AddSingleton(sp => new TransitDiversionService(
+    sp.GetRequiredService<InterventionService>(), sp.GetRequiredService<ExchangeService>(), DataFile("route-diversions.json")));
+
 var app = builder.Build();
+
+// Create the services that subscribe to exchange retries at start-up (TEC-04).
+app.Services.GetRequiredService<BudgetService>();
+app.Services.GetRequiredService<SecurityService>();
 app.UseCors("AllowFrontend");
 
 // Configure HTTP pipeline

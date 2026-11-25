@@ -26,3 +26,124 @@ Content-Type: application/json
 {
   "description": ""
 }
+
+### ================= Sprint 3 =================
+### Inbound messages need X-Source-Service; user actions send X-User-Id (audit, TEC-05).
+
+### ESV-03 receive a weather alert (from E-services)
+POST {{Maintenance.Api_HostAddress}}/api/weather-alerts
+Content-Type: application/json
+X-Source-Service: E-services
+
+{ "externalAlertId": "EC-2026-0042", "title": "Freezing rain warning", "content": "Up to 10 mm of ice",
+  "affectedArea": "King Street North", "severity": "Severe",
+  "validFrom": "2026-11-26T06:00:00Z", "validTo": "2026-11-27T06:00:00Z" }
+
+### ESV-03 list alerts awaiting review
+GET {{Maintenance.Api_HostAddress}}/api/weather-alerts?reviewStatus=Awaiting%20Review
+
+### ESV-04 record an assessment
+POST {{Maintenance.Api_HostAddress}}/api/weather-alerts/1/assessments
+Content-Type: application/json
+X-User-Id: mgr-01
+
+{ "decision": "Action Required", "rationale": "Bridges and sidewalks will ice" }
+
+### ESV-05 create an intervention from the alert (also: LinkInterventions, NoActionRequired, Reschedule, PutOnHold)
+POST {{Maintenance.Api_HostAddress}}/api/weather-alerts/1/actions
+Content-Type: application/json
+X-User-Id: mgr-01
+
+{ "type": "CreateIntervention", "priority": "High", "notes": "Salt the bridges" }
+
+### BUD-01 cost estimate
+PUT {{Maintenance.Api_HostAddress}}/api/interventions/1/budget/estimate
+Content-Type: application/json
+X-User-Id: mgr-01
+
+{ "repairCost": 1200, "materialCost": 350.50, "equipmentCost": 400 }
+
+### BUD-02 submit to Budget
+POST {{Maintenance.Api_HostAddress}}/api/interventions/1/budget/submit
+X-User-Id: mgr-01
+
+### BUD-03 decision from Budget (use the budgetRequestReference returned above)
+POST {{Maintenance.Api_HostAddress}}/api/budget/decisions
+Content-Type: application/json
+X-Source-Service: Budget
+
+{ "decisionId": "DEC-77", "requestReference": "BUD-1001", "decision": "Approved", "approvedAmount": 1950.50,
+  "comments": "Within Q4 envelope", "decidedBy": "B. Officer" }
+
+### BUD-05 estimated vs actual
+GET {{Maintenance.Api_HostAddress}}/api/interventions/1/budget/comparison
+
+### ESV-06 / SEC-03 / TRP-02 road closure to E-services, Security and Public Transport
+POST {{Maintenance.Api_HostAddress}}/api/interventions/1/road-closures
+Content-Type: application/json
+X-User-Id: mgr-01
+
+{ "closureStatus": "Closed", "plannedStart": "2026-11-28T08:00:00Z", "plannedEnd": "2026-11-28T16:00:00Z" }
+
+### SEC-03 work-status update to Security
+POST {{Maintenance.Api_HostAddress}}/api/interventions/1/work-status-updates
+Content-Type: application/json
+X-User-Id: mgr-01
+
+{}
+
+### REG-04 property disruption (link a property first)
+POST {{Maintenance.Api_HostAddress}}/api/interventions/1/property-disruptions
+Content-Type: application/json
+X-User-Id: mgr-01
+
+{ "disruptionType": "Water", "updateType": "New", "periodStart": "2026-11-28T08:00:00Z", "periodEnd": "2026-11-28T14:00:00Z" }
+
+### REG-03 utilities of a property
+GET {{Maintenance.Api_HostAddress}}/api/properties/PR-1002/utilities
+
+### SEC-01 assistance request to Security
+POST {{Maintenance.Api_HostAddress}}/api/interventions/1/security-requests
+Content-Type: application/json
+X-User-Id: mgr-01
+
+{ "reason": "Traffic control for lane closure", "periodStart": "2026-11-28T08:00:00Z", "periodEnd": "2026-11-28T16:00:00Z" }
+
+### SEC-02 response from Security (use the securityReference returned above)
+POST {{Maintenance.Api_HostAddress}}/api/security/responses
+Content-Type: application/json
+X-Source-Service: Security
+
+{ "responseId": "R1", "requestReference": "SEC-1001", "outcome": "Partially Approved", "comments": "One officer 08:00-12:00", "respondedBy": "Sgt. Lee" }
+
+### STF-01 personnel from Staff
+GET {{Maintenance.Api_HostAddress}}/api/staff?specialization=Road
+
+### STF-02 overlapping assignments
+GET {{Maintenance.Api_HostAddress}}/api/interventions/2/conflicts
+
+### TRP-01 routes and schedules
+GET {{Maintenance.Api_HostAddress}}/api/transit/routes?street=King%20Street
+
+### TRP-03 route change from Public Transport
+POST {{Maintenance.Api_HostAddress}}/api/transit/diversions
+Content-Type: application/json
+X-Source-Service: Public Transport
+
+{ "externalReference": "GRT-DIV-88", "affectedRoutes": ["7", "301"], "description": "Detour via Regina St",
+  "effectiveFrom": "2026-11-28T05:00:00Z", "effectiveTo": "2026-11-29T23:00:00Z" }
+
+### TEC-03 switch a mock service off (to test failures) / on
+PUT {{Maintenance.Api_HostAddress}}/api/mock-services/Budget/availability
+Content-Type: application/json
+
+{ "available": false }
+
+### TEC-04 failed exchanges / retry
+GET {{Maintenance.Api_HostAddress}}/api/exchanges?status=Failed
+
+### TEC-04 retry exchange 2
+POST {{Maintenance.Api_HostAddress}}/api/exchanges/2/retry
+
+### TEC-05 audit history
+GET {{Maintenance.Api_HostAddress}}/api/audit?entityType=Intervention&entityId=1

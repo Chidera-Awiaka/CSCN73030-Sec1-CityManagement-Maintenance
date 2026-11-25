@@ -1,0 +1,5 @@
+var searchData=
+[
+  ['name_0',['name',['../class_maintenance_1_1_api_1_1_integration_1_1_staff_member.html#a8d7740b52f15758bfaa6eb0edbeaefc0',1,'Maintenance.Api.Integration.StaffMember.Name'],['../class_maintenance_1_1_api_1_1_integration_1_1_transit_route.html#ad3fb37f343ebaab871bdd7e6b7036ea9',1,'Maintenance.Api.Integration.TransitRoute.Name']]],
+  ['notes_1',['notes',['../class_maintenance_1_1_api_1_1_d_t_os_1_1_property_disruption_dto.html#ad4b860f2cdb5dcb6841efca71c3ab499',1,'Maintenance.Api.DTOs.PropertyDisruptionDto.Notes'],['../class_maintenance_1_1_api_1_1_d_t_os_1_1_weather_alert_action_dto.html#ae3d7a633aa706a0264ef85fc61a4c4a2',1,'Maintenance.Api.DTOs.WeatherAlertActionDto.Notes'],['../class_maintenance_1_1_api_1_1_models_1_1_utility_info.html#a7df0906b2890829ffeb1783fd21bcd3b',1,'Maintenance.Api.Models.UtilityInfo.Notes'],['../class_maintenance_1_1_api_1_1_models_1_1_weather_alert_action.html#ad4065ce401e40e6ef8fc51280802edc9',1,'Maintenance.Api.Models.WeatherAlertAction.Notes']]]
+];

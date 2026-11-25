@@ -39,4 +39,13 @@ public interface IPropertyRegistry
     /// <returns>The property, or null when it does not exist.</returns>
     /// <exception cref="PropertyRegistryUnavailableException">The registry cannot be reached.</exception>
     Property? GetById(string propertyId);
+
+    /// <summary>
+    /// Gets the utility information supplied for a property (REG-03). A utility the
+    /// registry does not supply is returned as null so the UI can say so explicitly.
+    /// </summary>
+    /// <param name="propertyId">Property ID.</param>
+    /// <returns>The utilities, or null when the property does not exist.</returns>
+    /// <exception cref="PropertyRegistryUnavailableException">The registry cannot be reached.</exception>
+    PropertyUtilities? GetUtilities(string propertyId);
 }

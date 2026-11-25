@@ -1,0 +1,16 @@
+# Sprint 3 design documentation (Maintenance Service team).
+# Usage:  doxygen Doxyfile.sprint3      -> docs/sprint3/html/index.html
+# Reuses the team Doxyfile and only overrides what changed for Sprint 3.
+@INCLUDE               = Doxyfile
+PROJECT_NAME           = "Maintenance Service - Sprint 3"
+PROJECT_NUMBER         = "Maintenance Service Team"
+PROJECT_BRIEF          = "City Management - Maintenance Service, Sprint 3 design documentation"
+OUTPUT_DIRECTORY       = docs/sprint3
+HTML_OUTPUT            = html
+INPUT                  = README.md docs/integration-contracts.md backend src tests
+FILE_PATTERNS          = *.cs *.md
+RECURSIVE              = YES
+EXCLUDE                = docs/generated docs/sprint2 docs/sprint3 frontend
+EXCLUDE_PATTERNS       = */bin/* */obj/* */node_modules/*
+USE_MDFILE_AS_MAINPAGE = README.md
+GENERATE_LATEX         = NO

@@ -49,4 +49,16 @@ public class Intervention
 
     /// <summary>Actual cost of the work in dollars (MNT-08). Optional.</summary>
     public decimal? ActualCost { get; set; }
+
+    /// <summary>Cost estimate (BUD-01), or null when none has been entered.</summary>
+    public CostEstimate? CostEstimate { get; set; }
+
+    /// <summary>Budget approval status: Not Submitted, Pending, Approved or Rejected (BUD-02 / BUD-03).</summary>
+    public string BudgetStatus { get; set; } = BudgetRules.NotSubmitted;
+
+    /// <summary>Budget service's reference for the submitted request (BUD-02).</summary>
+    public string? BudgetRequestReference { get; set; }
+
+    /// <summary>Decision received from Budget (BUD-03), or null.</summary>
+    public BudgetDecision? BudgetDecision { get; set; }
 }
